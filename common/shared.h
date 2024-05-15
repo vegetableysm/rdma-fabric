@@ -58,23 +58,8 @@ extern "C" {
 #endif
 
 #include "ft_osd.h"
-// #define OFI_UTIL_PREFIX "ofi_"
-// #define OFI_NAME_DELIM ';'
-
-// #define ALIGN_MASK(x, mask) (((x) + (mask)) & ~(mask))
-// #define ALIGN(x, a) ALIGN_MASK(x, (typeof(x))(a) - 1)
-// #define ALIGN_DOWN(x, a) ALIGN((x) - ((a) - 1), (a))
 
 #define OFI_MR_BASIC_MAP (FI_MR_ALLOCATED | FI_MR_PROV_KEY | FI_MR_VIRT_ADDR)
-
-// /* exit codes must be 0-255 */
-// static inline int ft_exit_code(int ret)
-// {
-// 	int absret = ret < 0 ? -ret : ret;
-// 	return absret > 255 ? EXIT_FAILURE : absret;
-// }
-
-// #define ft_sa_family(addr) (((struct sockaddr *)(addr))->sa_family)
 
 struct test_size_param {
 	size_t size;
@@ -87,9 +72,9 @@ extern unsigned int test_cnt;
 
 #define FT_ENABLE_SIZES		(~0)
 #define FT_DEFAULT_SIZE		(1 << 0)
-// /* for RMA tests, reserve this much space for sync() and the various completion
-//  * routines to operate in without interference from RMA.
-//  */
+/* for RMA tests, reserve this much space for sync() and the various completion
+ * routines to operate in without interference from RMA.
+ */
 #define FT_RMA_SYNC_MSG_BYTES 4
 
 
@@ -248,6 +233,9 @@ extern char test_name[50];
 extern struct timespec start, end;
 extern struct ft_opts opts;
 
+extern char default_oob_port[8];
+extern struct test_size_param *user_test_sizes;
+
 void ft_parseinfo(int op, char *optarg, struct fi_info *hints,
 		  struct ft_opts *opts);
 void ft_parse_addr_opts(int op, char *optarg, struct ft_opts *opts);
@@ -322,9 +310,9 @@ extern uint64_t ft_tag;
 int ft_getsrcaddr(char *node, char *service, struct fi_info *hints);
 // int ft_read_addr_opts(char **node, char **service, struct fi_info *hints,
 // 		uint64_t *flags, struct ft_opts *opts);
-// char *size_str(char str[FT_STR_LEN], long long size);
-// char *cnt_str(char str[FT_STR_LEN], long long cnt);
-// int size_to_count(int size);
+char *size_str(char str[FT_STR_LEN], long long size);
+char *cnt_str(char str[FT_STR_LEN], long long cnt);
+int size_to_count(int size);
 // size_t datatype_to_size(enum fi_datatype datatype);
 
 static inline int ft_use_size(int index, int enable_flags)
@@ -387,16 +375,6 @@ static inline int ft_use_size(int index, int enable_flags)
 			fd = NULL;					\
 		}							\
 	} while (0)
-
-// #define FT_CLOSEV_FID(fd, cnt)			\
-// 	do {					\
-// 		int i;				\
-// 		if (!(fd))			\
-// 			break;			\
-// 		for (i = 0; i < (cnt); i++) {	\
-// 			FT_CLOSE_FID((fd)[i]);	\
-// 		}				\
-// 	} while (0)
 
 #define FT_EP_BIND(ep, fd, flags)					\
 	do {								\
@@ -548,7 +526,6 @@ int ft_read_cq(struct fid_cq *cq, uint64_t *cur, uint64_t total,
 // int ft_sync(void);
 // int ft_sync_pair(int status);
 // int ft_fork_and_pair(void);
-// int ft_fork_child(void);
 // int ft_wait_child(void);
 int ft_finalize(void);
 // int ft_finalize_ep(struct fid_ep *ep);
@@ -612,28 +589,9 @@ int ft_get_cq_comp(struct fid_cq *cq, uint64_t *cur, uint64_t total, int timeout
 void eq_readerr(struct fid_eq *eq, const char *eq_str);
 int ft_poll_fd(int fd, int timeout);
 
-// int64_t get_elapsed(const struct timespec *b, const struct timespec *a,
-// 		enum precision p);
-// void show_perf(char *name, size_t tsize, int iters, struct timespec *start,
-// 		struct timespec *end, int xfers_per_iter);
 void show_perf_mr(size_t tsize, int iters, struct timespec *start,
 		struct timespec *end, int xfers_per_iter, int argc, char *argv[]);
-// void ft_parse_opts_range(char *optarg);
-// int ft_send_recv_greeting(struct fid_ep *ep);
-// int ft_send_greeting(struct fid_ep *ep);
-// int ft_recv_greeting(struct fid_ep *ep);
-
-// int ft_accept_next_client();
-
-// int check_recv_msg(const char *message);
 uint64_t ft_info_to_mr_access(struct fi_info *info);
-// int ft_alloc_bit_combo(uint64_t fixed, uint64_t opt, uint64_t **combos, int *len);
-// void ft_free_bit_combo(uint64_t *combo);
-// int ft_cntr_open(struct fid_cntr **cntr);
-// const char *ft_util_name(const char *str, size_t *len);
-// const char *ft_core_name(const char *str, size_t *len);
-// char **ft_split_and_alloc(const char *s, const char *delim, size_t *count);
-// void ft_free_string_array(char **s);
 
 
 enum {
@@ -650,18 +608,6 @@ extern int lopt_idx;
 extern struct option long_opts[];
 int ft_parse_long_opts(int op, char *optarg);
 void ft_longopts_usage();
-
-// #define ft_assert(expr)					\
-// 	do {						\
-// 		if (!debug_assert) {			\
-// 			assert(expr);			\
-// 		} else {				\
-// 			if (!(expr))			\
-// 				FT_WARN("assert (pid %d)", getpid()); \
-// 			while (!(expr))			\
-// 				;			\
-// 		}					\
-// 	} while (0)
 
 #define FT_PROCESS_QUEUE_ERR(readerr, rd, queue, fn, str)	\
 	do {							\
@@ -682,42 +628,8 @@ void ft_longopts_usage();
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define ARRAY_SIZE(A) (sizeof(A)/sizeof(*A))
 
-// #define TEST_ENUM_SET_N_RETURN(str, len,  enum_val, type, data)	\
-// 	TEST_SET_N_RETURN(str, len, #enum_val, enum_val, type, data)
-
-// #define TEST_SET_N_RETURN(str, len, val_str, val, type, data)	\
-// 	do {							\
-// 		if (len == strlen(val_str) &&			\
-// 		    !strncmp(str, val_str, len)) {		\
-// 			*(type *)(data) = val;			\
-// 			return 0;				\
-// 		}						\
-// 	} while (0)
-
-// /* FT_TOKEN_CHECK - compare a token character array (may not be
-//  * NULL terminated) against keyword (NULL terminated).  Expression
-//  * is true if they are the same length and characters.
-//  * token - character array that may not be NULL termianted
-//  * len - number of characters to compare from token
-//  * keyword - NULL terminated string to be compared against token
-//  */
-
-// #define FT_TOKEN_CHECK(token, len, keyword) \
-// 		(len == strlen(keyword) && !strncmp(token, keyword, len))
-
 #ifdef __cplusplus
 }
 #endif
-
-// static inline void *ft_get_page_start(const void *addr, size_t page_size)
-// {
-// 	return (void *)((uintptr_t) addr & ~(page_size - 1));
-// }
-
-// static inline void *ft_get_page_end(const void *addr, size_t page_size)
-// {
-// 	return (void *)((uintptr_t)ft_get_page_start((const char *)addr
-// 			+ page_size, page_size) - 1);
-// }
 
 #endif /* _SHARED_H_ */

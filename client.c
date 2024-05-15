@@ -59,22 +59,10 @@ static int run(void)
 	if (ret)
 		return ret;
 
-	if (!(opts.options & FT_OPT_SIZE)) {
-		for (i = 0; i < TEST_CNT; i++) {
-			if (!ft_use_size(i, opts.sizes_enabled))
-				continue;
-			opts.transfer_size = test_size[i].size;
-			init_test(&opts, test_name, sizeof(test_name));
-			ret = bandwidth_rma(opts.rma_op, &remote);
-			if (ret)
-				goto out;
-		}
-	} else {
-		init_test(&opts, test_name, sizeof(test_name));
-		ret = bandwidth_rma(opts.rma_op, &remote);
-		if (ret)
-			goto out;
-	}
+	init_test(&opts, test_name, sizeof(test_name));
+	ret = bandwidth_rma(opts.rma_op, &remote);
+	if (ret)
+		goto out;
 
 	ft_finalize();
 out:
@@ -101,32 +89,14 @@ int main(int argc, char **argv)
 
 	while ((op = getopt_long(argc, argv, "Uh" CS_OPTS INFO_OPTS API_OPTS
 			    BENCHMARK_OPTS, long_opts, &lopt_idx)) != -1) {
-		switch (op) {
-		default:
-			if (!ft_parse_long_opts(op, optarg))
-				continue;
-			ft_parse_benchmark_opts(op, optarg);
-			ft_parseinfo(op, optarg, hints, &opts);
-			ft_parsecsopts(op, optarg, &opts);
-			ret = ft_parse_api_opts(op, optarg, hints, &opts);
-			if (ret)
-				return ret;
-			break;
-		case 'U':
-			hints->tx_attr->op_flags |= FI_DELIVERY_COMPLETE;
-			break;
-		case '?':
-		case 'h':
-			ft_csusage(argv[0], "Bandwidth test using RMA operations.");
-			ft_benchmark_usage();
-			FT_PRINT_OPTS_USAGE("-o <op>", "rma op type: read|write|"
-					"writedata (default: write)\n");
-			fprintf(stderr, "Note: read/write bw tests are bidirectional.\n"
-					"      writedata bw test is unidirectional"
-					" from the client side.\n");
-			ft_longopts_usage();
-			return EXIT_FAILURE;
-		}
+		if (!ft_parse_long_opts(op, optarg))
+			continue;
+		ft_parse_benchmark_opts(op, optarg);
+		ft_parseinfo(op, optarg, hints, &opts);
+		ft_parsecsopts(op, optarg, &opts);
+		ret = ft_parse_api_opts(op, optarg, hints, &opts);
+		if (ret)
+			return ret;
 	}
 
 	/* data validation on read and write ops requires delivery_complete semantics. */
